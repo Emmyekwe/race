@@ -22,6 +22,7 @@ export const config = Object.freeze({
   port: Number(process.env.PORT) || 4000,
   mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017/racing_game',
   jwtSecret: process.env.JWT_SECRET || 'dev-only-insecure-secret-change-me',
-  clientOrigin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+  // On Render, RENDER_EXTERNAL_URL is the service's public URL (e.g. https://arcade-racer.onrender.com).
+  clientOrigin: process.env.CLIENT_ORIGIN || process.env.RENDER_EXTERNAL_URL || 'http://localhost:5173',
   tickRate: clamp(Number(process.env.TICK_RATE) || 30, 10, 60),
 })
