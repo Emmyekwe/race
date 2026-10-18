@@ -1,0 +1,21 @@
+# Render Blueprint: one free web service that serves the built React client,
+# the REST API and Socket.io from the same origin.
+# Deploys are triggered by GitHub Actions (.github/workflows/ci-cd.yml) only after tests pass.
+services:
+  - type: web
+    name: arcade-racer
+    runtime: node
+    plan: free
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: false
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "20"
+      - key: MONGO_URI
+        sync: false # paste your MongoDB Atlas connection string when prompted
+      - key: JWT_SECRET
+        generateValue: true

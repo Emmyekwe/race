@@ -91,6 +91,29 @@ npm run build   # builds client/dist
 npm start       # server also serves the built client on PORT
 ```
 
+## Tests
+
+```bash
+npm test   # boots the server against mongodb://localhost:27017/racing_game_test and drops it afterwards
+```
+
+## Deployment (free) & CI/CD
+
+One free **Render** web service serves the client, REST API and Socket.io; the database is a free **MongoDB Atlas** M0 cluster.
+**GitHub Actions** (`.github/workflows/ci-cd.yml`) builds the client, runs the integration tests against a MongoDB service container and checks the Docker images build. Only when everything passes on `main` does it call Render's deploy hook.
+
+One-time setup:
+
+1. **Atlas** — create an M0 cluster, a database user, allow network access from `0.0.0.0/0`, and copy the
+   connection string with `/racing_game` as the database name.
+2. **GitHub** — push this repository.
+3. **Render** — *New → Blueprint*, select the repo (uses `render.yaml`), paste `MONGO_URI` when prompted.
+   `JWT_SECRET` is generated for you; the public URL is picked up automatically via `RENDER_EXTERNAL_URL`.
+4. **Deploy hook** — Render → service → *Settings → Deploy Hook* → copy the URL, then in GitHub add it as the
+   repository secret `RENDER_DEPLOY_HOOK_URL` (*Settings → Secrets and variables → Actions*).
+
+From then on: open a PR → CI runs; merge to `main` → CI runs → Render deploys.
+
 ## Controls
 
 | Key | Action |
