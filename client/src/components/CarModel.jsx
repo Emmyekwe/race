@@ -1,8 +1,8 @@
-import { VEHICLE } from '../game/constants.js'
+import { GARAGE, VEHICLE } from '../game/constants.js'
 
 // Shared visuals for the local and remote cars. The car's front is +Z.
 
-export function CarBody({ color }) {
+export function CarBody({ color, accentColor = GARAGE.defaultAccent }) {
   return (
     <group>
       {/* Main body */}
@@ -23,12 +23,12 @@ export function CarBody({ color }) {
       {/* Racing stripe */}
       <mesh position={[0, 0.281, 0.9]}>
         <boxGeometry args={[0.35, 0.01, 2.2]} />
-        <meshStandardMaterial color="#f8f9fa" roughness={0.5} />
+        <meshStandardMaterial color={accentColor} roughness={0.5} />
       </mesh>
       {/* Rear wing */}
       <mesh castShadow position={[0, 0.62, -1.85]}>
         <boxGeometry args={[1.6, 0.08, 0.42]} />
-        <meshStandardMaterial color={color} metalness={0.45} roughness={0.35} />
+        <meshStandardMaterial color={accentColor} metalness={0.45} roughness={0.35} />
       </mesh>
       {[-0.55, 0.55].map((x) => (
         <mesh key={x} position={[x, 0.42, -1.85]}>

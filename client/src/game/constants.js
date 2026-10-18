@@ -38,6 +38,7 @@ export const WHEEL_OFFSETS = [
 
 export const GARAGE = {
   defaultColor: '#e63946',
+  defaultAccent: '#f8f9fa',
   minSpeedModifier: 0.8,
   maxSpeedModifier: 1.2,
   swatches: ['#e63946', '#f4a261', '#ffd60a', '#2a9d8f', '#4cc9f0', '#4361ee', '#9b5de5', '#f15bb5', '#f8f9fa', '#212529'],

@@ -34,11 +34,18 @@ export default function Game() {
 
       <Physics broadphase="SAP" gravity={[0, -9.81, 0]} defaultContactMaterial={{ friction: 0.02, restitution: 0.05 }}>
         <RaceTrack />
-        {self && <Vehicle slot={self.slot} color={self.color} topSpeedModifier={self.topSpeedModifier} />}
+        {self && (
+          <Vehicle
+            slot={self.slot}
+            color={self.color}
+            accentColor={self.accentColor}
+            topSpeedModifier={self.topSpeedModifier}
+          />
+        )}
       </Physics>
 
       {opponents.map((p) => (
-        <OpponentVehicle key={p.id} id={p.id} username={p.username} color={p.color} />
+        <OpponentVehicle key={p.id} id={p.id} username={p.username} color={p.color} accentColor={p.accentColor} />
       ))}
     </Canvas>
   )

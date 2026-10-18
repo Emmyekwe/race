@@ -15,6 +15,7 @@ import { config } from './config.js'
 import { connectDB, disconnectDB } from './db.js'
 import User, { USERNAME_COLLATION } from './models/User.js'
 import Garage, {
+  DEFAULT_ACCENT_COLOR,
   DEFAULT_CAR_COLOR,
   HEX_COLOR_RE,
   TOP_SPEED_MODIFIER_MAX,
@@ -93,6 +94,7 @@ function validateCredentials(username, password) {
 function serializeGarage(garage) {
   return {
     selectedCarColor: garage.selectedCarColor,
+    accentColor: garage.accentColor ?? DEFAULT_ACCENT_COLOR,
     topSpeedModifier: garage.topSpeedModifier,
   }
 }
@@ -108,7 +110,13 @@ function sessionPayload(user, garage) {
 function getOrCreateGarage(userId) {
   return Garage.findOneAndUpdate(
     { userId },
-    { $setOnInsert: { selectedCarColor: DEFAULT_CAR_COLOR, topSpeedModifier: 1 } },
+    {
+      $setOnInsert: {
+        selectedCarColor: DEFAULT_CAR_COLOR,
+        accentColor: DEFAULT_ACCENT_COLOR,
+        topSpeedModifier: 1,
+      },
+    },
     { new: true, upsert: true, setDefaultsOnInsert: true },
   )
 }
@@ -215,14 +223,15 @@ app.put(
   '/api/garage',
   requireAuth,
   asyncHandler(async (req, res) => {
-    const { selectedCarColor, topSpeedModifier } = req.body ?? {}
+    const { selectedCarColor, accentColor, topSpeedModifier } = req.body ?? {}
     const updates = {}
 
-    if (selectedCarColor !== undefined) {
-      if (typeof selectedCarColor !== 'string' || !HEX_COLOR_RE.test(selectedCarColor)) {
-        return res.status(400).json({ error: 'selectedCarColor must be a hex colour like #ff0055' })
+    for (const [field, value] of Object.entries({ selectedCarColor, accentColor })) {
+      if (value === undefined) continue
+      if (typeof value !== 'string' || !HEX_COLOR_RE.test(value)) {
+        return res.status(400).json({ error: `${field} must be a hex colour like #ff0055` })
       }
-      updates.selectedCarColor = selectedCarColor.toLowerCase()
+      updates[field] = value.toLowerCase()
     }
     if (topSpeedModifier !== undefined) {
       const n = Number(topSpeedModifier)
@@ -260,6 +269,7 @@ app.get(
         userId: entry.userId.toString(),
         username: entry.username,
         lapTimeMs: entry.lapTimeMs,
+        carColor: entry.carColor ?? null,
         createdAt: entry.createdAt,
       })),
     })
@@ -321,6 +331,7 @@ const io = new Server(httpServer, {
  * @property {string} userId
  * @property {string} username
  * @property {string} color
+ * @property {string} accentColor
  * @property {number} topSpeedModifier
  * @property {number} slot            starting-grid slot
  * @property {number} lapsCompleted
@@ -393,6 +404,7 @@ function serializePlayer(p) {
     userId: p.userId,
     username: p.username,
     color: p.color,
+    accentColor: p.accentColor,
     topSpeedModifier: p.topSpeedModifier,
     slot: p.slot,
     lapsCompleted: p.lapsCompleted,
@@ -438,6 +450,15 @@ function getRoomAndPlayer(socket) {
   return { room, player }
 }
 
+/** The parts of a garage a player brings into a room. */
+function garageLoadout(garage) {
+  return {
+    color: garage.selectedCarColor,
+    accentColor: garage.accentColor ?? DEFAULT_ACCENT_COLOR,
+    topSpeedModifier: garage.topSpeedModifier,
+  }
+}
+
 async function joinRoom(socket, room) {
   if (socket.data.joining) throw new GameError('Already joining a room')
   socket.data.joining = true
@@ -456,8 +477,7 @@ async function joinRoom(socket, room) {
       socketId: socket.id,
       userId: socket.data.user.id,
       username: socket.data.user.username,
-      color: garage.selectedCarColor,
-      topSpeedModifier: garage.topSpeedModifier,
+      ...garageLoadout(garage),
       slot: nextFreeSlot(room),
       ...freshRaceState(),
     }
@@ -568,13 +588,13 @@ function endRace(room) {
   broadcastRoom(room)
 }
 
-async function persistLap(userId, trackName, lapTimeMs) {
+async function persistLap(userId, trackName, lapTimeMs, carColor) {
   try {
     const previousBest = await RaceRecord.findOne({ userId, trackName })
       .sort({ lapTimeMs: 1 })
       .select('lapTimeMs')
       .lean()
-    await RaceRecord.create({ userId, trackName, lapTimeMs })
+    await RaceRecord.create({ userId, trackName, lapTimeMs, carColor })
     io.emit('leaderboard:changed', { trackName })
     return { saved: true, personalBest: !previousBest || lapTimeMs < previousBest.lapTimeMs }
   } catch (err) {
@@ -683,6 +703,24 @@ io.on('connection', (socket) => {
     }),
   )
 
+  // Re-reads the saved garage so colour/tuning changes made in the lobby show up for everyone.
+  socket.on(
+    'garage:refresh',
+    withAck(async () => {
+      const { room, player } = getRoomAndPlayer(socket)
+      if (!room || !player) return { applied: false }
+      if (room.status !== 'lobby') throw new GameError('Garage changes apply after this race')
+      const garage = await getOrCreateGarage(socket.data.user.id)
+      // The room may have started (or we may have left) while the database read was in flight.
+      if (room.status !== 'lobby' || room.players.get(socket.id) !== player) {
+        throw new GameError('Garage changes apply after this race')
+      }
+      Object.assign(player, garageLoadout(garage))
+      broadcastRoom(room)
+      return { applied: true }
+    }),
+  )
+
   socket.on(
     'race:start',
     withAck(async () => {
@@ -756,7 +794,7 @@ io.on('connection', (socket) => {
       if (player.finishTimeMs !== null) handlePlayerFinished(room)
       broadcastRoom(room)
 
-      const { saved, personalBest } = await persistLap(player.userId, room.trackName, lapTimeMs)
+      const { saved, personalBest } = await persistLap(player.userId, room.trackName, lapTimeMs, player.color)
       return { ...result, lapTimeMs, saved, personalBest }
     }),
   )

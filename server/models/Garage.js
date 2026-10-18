@@ -1,6 +1,7 @@
 import mongoose from 'mongoose'
 
 export const DEFAULT_CAR_COLOR = '#e63946'
+export const DEFAULT_ACCENT_COLOR = '#f8f9fa'
 export const TOP_SPEED_MODIFIER_MIN = 0.8
 export const TOP_SPEED_MODIFIER_MAX = 1.2
 export const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/
@@ -16,6 +17,13 @@ const GarageSchema = new mongoose.Schema(
     selectedCarColor: {
       type: String,
       default: DEFAULT_CAR_COLOR,
+      match: HEX_COLOR_RE,
+      lowercase: true,
+    },
+    // Racing stripe and rear wing.
+    accentColor: {
+      type: String,
+      default: DEFAULT_ACCENT_COLOR,
       match: HEX_COLOR_RE,
       lowercase: true,
     },
