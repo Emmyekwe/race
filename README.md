@@ -1,4 +1,4 @@
-# Arcade Racer
+# Arcade Racer App
 
 Real-time multiplayer 3D arcade racing: **React + Vite + React Three Fiber + @react-three/cannon** on the client, **Node.js + Express + Socket.io + Mongoose/MongoDB** on the server.
 
