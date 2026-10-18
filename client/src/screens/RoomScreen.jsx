@@ -2,17 +2,18 @@ import { useState } from 'react'
 import { request } from '../net/socket.js'
 import { useGameStore } from '../state/store.js'
 import { formatLapTime, ordinal } from '../utils/format.js'
-import LeaderboardTable from '../components/LeaderboardTable.jsx'
+import GarageUI from '../components/GarageUI.jsx'
+import LeaderboardModal from '../components/LeaderboardModal.jsx'
 
 export default function RoomScreen() {
   const room = useGameStore((s) => s.room)
   const selfId = useGameStore((s) => s.selfId)
-  const username = useGameStore((s) => s.auth?.user?.username)
   const connection = useGameStore((s) => s.connection)
   const setRoom = useGameStore((s) => s.setRoom)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const [copied, setCopied] = useState(false)
+  const [showLeaderboard, setShowLeaderboard] = useState(false)
 
   const isHost = room.hostId === selfId
   const results = room.lastResults
@@ -55,6 +56,9 @@ export default function RoomScreen() {
           ARCADE<span>RACER</span>
         </h1>
         <div className="topbar-right">
+          <button type="button" className="btn ghost" onClick={() => setShowLeaderboard(true)}>
+            🏆 Leaderboard
+          </button>
           <button type="button" className="btn ghost" onClick={leave}>
             Leave room
           </button>
@@ -105,8 +109,9 @@ export default function RoomScreen() {
             <p className="waiting">Waiting for the host to start the race…</p>
           )}
           {error && <p className="error">{error}</p>}
-          <p className="muted small">Garage changes apply the next time you join a room.</p>
         </section>
+
+        <GarageUI />
 
         {results && (
           <section className="card">
@@ -138,11 +143,9 @@ export default function RoomScreen() {
           </section>
         )}
 
-        <section className="card">
-          <h2>Fastest laps</h2>
-          <LeaderboardTable trackName={room.trackName} highlightUsername={username} />
-        </section>
       </main>
+
+      {showLeaderboard && <LeaderboardModal trackName={room.trackName} onClose={() => setShowLeaderboard(false)} />}
     </div>
   )
 }
