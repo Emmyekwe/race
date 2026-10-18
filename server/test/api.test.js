@@ -111,7 +111,7 @@ test('register, duplicate usernames and login', async () => {
   const created = await register('alice')
   assert.equal(created.status, 201)
   assert.ok(created.data.token)
-  assert.deepEqual(created.data.garage, { selectedCarColor: '#e63946', topSpeedModifier: 1 })
+  assert.deepEqual(created.data.garage, { selectedCarColor: '#e63946', accentColor: '#f8f9fa', topSpeedModifier: 1 })
 
   assert.equal((await register('ALICE')).status, 409, 'usernames are case-insensitive')
   assert.equal((await register('a')).status, 400, 'short usernames are rejected')
@@ -130,13 +130,18 @@ test('garage requires auth and validates input', async () => {
   const updated = await api('/api/garage', {
     method: 'PUT',
     token: data.token,
-    body: { selectedCarColor: '#4CC9F0', topSpeedModifier: 1.15 },
+    body: { selectedCarColor: '#4CC9F0', accentColor: '#FFD60A', topSpeedModifier: 1.15 },
   })
   assert.equal(updated.status, 200)
-  assert.deepEqual(updated.data.garage, { selectedCarColor: '#4cc9f0', topSpeedModifier: 1.15 })
+  assert.deepEqual(updated.data.garage, { selectedCarColor: '#4cc9f0', accentColor: '#ffd60a', topSpeedModifier: 1.15 })
+
+  const reloaded = await api('/api/garage', { token: data.token })
+  assert.deepEqual(reloaded.data.garage, updated.data.garage, 'garage persists in MongoDB')
 
   const invalid = await api('/api/garage', { method: 'PUT', token: data.token, body: { topSpeedModifier: 5 } })
   assert.equal(invalid.status, 400)
+  const badAccent = await api('/api/garage', { method: 'PUT', token: data.token, body: { accentColor: 'gold' } })
+  assert.equal(badAccent.status, 400)
 })
 
 test('sockets reject invalid tokens', async () => {
@@ -155,6 +160,17 @@ test('matchmaking, transform relay and lap recording', { timeout: 30000 }, async
   assert.equal(guestJoin.room.id, hostJoin.room.id, 'quick join fills the open lobby')
   assert.equal(guestJoin.room.players.length, 2)
 
+  // Repainting in the lobby is pushed to everyone in the room.
+  await api('/api/garage', { method: 'PUT', token: host.token, body: { selectedCarColor: '#2a9d8f', accentColor: '#ffd60a' } })
+  const repainted = new Promise((resolve) => {
+    guestSocket.on('room:update', (room) => {
+      const hostPlayer = room.players.find((p) => p.id === hostSocket.id)
+      if (hostPlayer?.color === '#2a9d8f') resolve(hostPlayer)
+    })
+  })
+  assert.equal((await ask(hostSocket, 'garage:refresh')).applied, true)
+  assert.equal((await repainted).accentColor, '#ffd60a')
+
   const notHost = await ask(guestSocket, 'race:start')
   assert.equal(notHost.ok, false)
 
@@ -164,6 +180,9 @@ test('matchmaking, transform relay and lap recording', { timeout: 30000 }, async
   const { startsAt, serverNow } = await countdown
   assert.equal(startsAt - serverNow, 3000)
   await go
+
+  const midRace = await ask(hostSocket, 'garage:refresh')
+  assert.equal(midRace.ok, false, 'garage changes are locked while racing')
 
   // The guest should receive the host's transform in room snapshots.
   const snapshot = new Promise((resolve) => {
@@ -189,6 +208,7 @@ test('matchmaking, transform relay and lap recording', { timeout: 30000 }, async
   const board = await api('/api/leaderboard?track=oval-speedway')
   assert.equal(board.data.entries.length, 1)
   assert.equal(board.data.entries[0].username, 'host_driver')
+  assert.equal(board.data.entries[0].carColor, '#2a9d8f', 'leaderboard shows the colour the lap was set in')
 
   const mine = await api('/api/records/me', { token: host.token })
   assert.equal(mine.data.totalLaps, 1)

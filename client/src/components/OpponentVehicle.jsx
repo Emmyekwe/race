@@ -7,7 +7,7 @@ import { sampleRemoteTransform } from '../net/interpolation.js'
 import { VEHICLE, WHEEL_OFFSETS } from '../game/constants.js'
 
 /** A remote player's car: no physics, just a smoothly interpolated replay of server snapshots. */
-export default function OpponentVehicle({ id, username, color }) {
+export default function OpponentVehicle({ id, username, color, accentColor }) {
   const group = useRef(null)
   const label = useRef(null)
   const wheel0 = useRef(null)
@@ -38,7 +38,7 @@ export default function OpponentVehicle({ id, username, color }) {
 
   return (
     <group ref={group} visible={false}>
-      <CarBody color={color} />
+      <CarBody color={color} accentColor={accentColor} />
       {WHEEL_OFFSETS.map((offset, i) => (
         <group key={i} ref={wheelRefs[i]} position={offset}>
           <WheelMesh />

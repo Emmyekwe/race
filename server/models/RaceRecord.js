@@ -22,6 +22,12 @@ const RaceRecordSchema = new mongoose.Schema(
         message: 'lapTimeMs must be an integer number of milliseconds',
       },
     },
+    // Snapshot of the car's colour when the lap was set (garages change; records don't).
+    carColor: {
+      type: String,
+      match: /^#[0-9a-f]{6}$/,
+      default: null,
+    },
     createdAt: {
       type: Date,
       default: Date.now,
@@ -47,6 +53,7 @@ RaceRecordSchema.statics.getLeaderboard = function getLeaderboard(trackName, lim
       $group: {
         _id: '$userId',
         lapTimeMs: { $first: '$lapTimeMs' },
+        carColor: { $first: '$carColor' },
         createdAt: { $first: '$createdAt' },
       },
     },
@@ -67,6 +74,7 @@ RaceRecordSchema.statics.getLeaderboard = function getLeaderboard(trackName, lim
         userId: '$_id',
         username: '$user.username',
         lapTimeMs: 1,
+        carColor: 1,
         createdAt: 1,
       },
     },

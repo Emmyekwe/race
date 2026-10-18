@@ -79,7 +79,7 @@ const Wheel = forwardRef(function Wheel(_props, ref) {
   )
 })
 
-export default function Vehicle({ slot, color, topSpeedModifier = 1 }) {
+export default function Vehicle({ slot, color, accentColor, topSpeedModifier = 1 }) {
   const spawn = useMemo(() => gridPose(slot), [slot])
   const controls = useKeyboardControls()
   const camera = useThree((state) => state.camera)
@@ -255,7 +255,7 @@ export default function Vehicle({ slot, color, topSpeedModifier = 1 }) {
   return (
     <group ref={vehicleRef}>
       <group ref={chassisRef}>
-        <CarBody color={color} />
+        <CarBody color={color} accentColor={accentColor} />
       </group>
       <Wheel ref={wheel0} />
       <Wheel ref={wheel1} />
