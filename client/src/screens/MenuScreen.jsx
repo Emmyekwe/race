@@ -80,7 +80,7 @@ export default function MenuScreen() {
               disabled={!online || busy}
               onClick={() => joinWith('room:quickJoin')}
             >
-              Quick race
+              Quick Race
             </button>
             <button
               type="button"
@@ -88,7 +88,7 @@ export default function MenuScreen() {
               disabled={!online || busy}
               onClick={() => joinWith('room:create')}
             >
-              Create private room
+              Create Private Room
             </button>
             <form
               className="inline-form"
