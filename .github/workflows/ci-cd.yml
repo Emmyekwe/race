@@ -35,25 +35,35 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build client
-        run: npm run build
-
       - name: Integration tests
         run: npm test
         env:
           TEST_MONGO_URI: mongodb://localhost:27017/racing_game_test
 
-  docker:
-    name: Docker images build
+  build:
+    name: Build
+    needs: [test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build images
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build client
+        run: npm run build
+
+      - name: Build Docker images
         run: docker compose build
 
   deploy:
     name: Deploy to Render
-    needs: [test, docker]
+    needs: [build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: production

@@ -100,7 +100,7 @@ npm test   # boots the server against mongodb://localhost:27017/racing_game_test
 ## Deployment (free) & CI/CD
 
 One free **Render** web service serves the client, REST API and Socket.io; the database is a free **MongoDB Atlas** M0 cluster.
-**GitHub Actions** (`.github/workflows/ci-cd.yml`) builds the client, runs the integration tests against a MongoDB service container and checks the Docker images build. Only when everything passes on `main` does it call Render's deploy hook.
+**GitHub Actions** (`.github/workflows/ci-cd.yml`) runs in three stages, each waiting for the one before it to pass: **test** (integration tests against a MongoDB service container), then **build** (the client and the Docker images), then **deploy** (calls Render's deploy hook, on pushes to `main` only).
 
 One-time setup:
 
