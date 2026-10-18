@@ -72,7 +72,7 @@ export default function MenuScreen() {
 
         <section className="card">
           <h2>Race</h2>
-          <p className="muted">{TRACK_NAME} · 3 laps · up to 6 drivers</p>
+          <p className="muted capitalize">{TRACK_NAME} · 3 laps · up to 6 drivers</p>
           <div className="stack">
             <button
               type="button"
