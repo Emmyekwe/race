@@ -128,7 +128,7 @@ export default function MenuScreen() {
           <div className="card-title-row">
             <h2>Fastest laps</h2>
             <button type="button" className="btn ghost small" onClick={() => setShowLeaderboard(true)}>
-              View top 10
+              View top 10 laps
             </button>
           </div>
           <LeaderboardTable trackName={TRACK_NAME} highlightUsername={auth.user.username} limit={5} />
