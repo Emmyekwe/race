@@ -82,7 +82,7 @@ npm run dev
 ### 5. Play multiplayer locally
 
 Open http://localhost:5173 in **two browser tabs** (sessions are per-tab), create an account in each,
-click **Quick race** in both, then press **Start race** as the host.
+click **Quick Race** in both, then press **Start race** as the host.
 
 ### Production build
 

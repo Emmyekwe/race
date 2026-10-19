@@ -72,7 +72,7 @@ export default function MenuScreen() {
 
         <section className="card">
           <h2>Race</h2>
-          <p className="muted">{TRACK_NAME} · 3 laps · up to 6 drivers</p>
+          <p className="muted capitalize">{TRACK_NAME} · 3 laps · up to 6 drivers</p>
           <div className="stack">
             <button
               type="button"
@@ -80,7 +80,7 @@ export default function MenuScreen() {
               disabled={!online || busy}
               onClick={() => joinWith('room:quickJoin')}
             >
-              Quick race
+              Quick Race
             </button>
             <button
               type="button"
@@ -88,7 +88,7 @@ export default function MenuScreen() {
               disabled={!online || busy}
               onClick={() => joinWith('room:create')}
             >
-              Create private room
+              Create Private Room
             </button>
             <form
               className="inline-form"
@@ -128,7 +128,7 @@ export default function MenuScreen() {
           <div className="card-title-row">
             <h2>Fastest laps</h2>
             <button type="button" className="btn ghost small" onClick={() => setShowLeaderboard(true)}>
-              View top 10
+              View top 10 laps
             </button>
           </div>
           <LeaderboardTable trackName={TRACK_NAME} highlightUsername={auth.user.username} limit={5} />
