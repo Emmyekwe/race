@@ -12,6 +12,7 @@ export default function MenuScreen() {
   const auth = useGameStore((s) => s.auth)
   const connection = useGameStore((s) => s.connection)
   const setRoom = useGameStore((s) => s.setRoom)
+  const setChat = useGameStore((s) => s.setChat)
   const logout = useGameStore((s) => s.logout)
 
   const [records, setRecords] = useState(null)
@@ -40,6 +41,7 @@ export default function MenuScreen() {
     try {
       const res = await request(event, payload)
       setRoom(res.room)
+      setChat(res.chat)
     } catch (err) {
       setError(err.message)
     } finally {

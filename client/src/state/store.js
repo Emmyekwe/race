@@ -25,6 +25,9 @@ function saveAuth(auth) {
   }
 }
 
+// Keep in sync with CHAT_HISTORY in server/server.js.
+const CHAT_HISTORY = 50
+
 const initialRaceState = () => ({
   countdownEndsAt: null, // performance.now() timestamps
   goAt: null,
@@ -44,6 +47,7 @@ export const useGameStore = create((set, get) => ({
   selfId: null, // our socket id
   room: null, // serialized room from the server
   notice: null, // { id, message } transient toast
+  chat: [], // room chat, oldest first: { id, kind, userId, username, color, text, at }
   ...initialRaceState(),
 
   setSession: ({ token, user, garage }) => {
@@ -54,12 +58,20 @@ export const useGameStore = create((set, get) => ({
 
   logout: () => {
     saveAuth(null)
-    set({ auth: null, garage: null, room: null, selfId: null, connection: 'disconnected', ...initialRaceState() })
+    set({ auth: null, garage: null, room: null, selfId: null, connection: 'disconnected', chat: [], ...initialRaceState() })
   },
 
   setGarage: (garage) => set({ garage }),
   setConnection: (connection, selfId) => set((s) => ({ connection, selfId: selfId ?? s.selfId })),
-  setRoom: (room) => set({ room }),
+  setRoom: (room) => set(room ? { room } : { room: null, chat: [] }),
+
+  // Join responses carry the room's history; it replaces anything that arrived just before it.
+  setChat: (messages) => set({ chat: Array.isArray(messages) ? messages.slice(-CHAT_HISTORY) : [] }),
+  addChatMessage: (message) =>
+    set((s) => {
+      if (s.chat.some((m) => m.id === message.id)) return {}
+      return { chat: [...s.chat, message].slice(-CHAT_HISTORY) }
+    }),
 
   showNotice: (message) => set({ notice: { id: `${Date.now()}-${Math.random()}`, message } }),
   clearNotice: () => set({ notice: null }),

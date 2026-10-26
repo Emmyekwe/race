@@ -157,7 +157,8 @@ export default function HUD() {
       <div className="hud-controls">
         <kbd>W</kbd>/<kbd>↑</kbd> throttle · <kbd>S</kbd>/<kbd>↓</kbd> brake/reverse · <kbd>A</kbd>
         <kbd>D</kbd>/<kbd>←</kbd>
-        <kbd>→</kbd> steer · <kbd>Space</kbd> handbrake · <kbd>R</kbd> reset
+        <kbd>→</kbd> steer · <kbd>Space</kbd> handbrake · <kbd>R</kbd> reset ·{' '}
+        <kbd>Enter</kbd> chat
       </div>
     </div>
   )

@@ -40,14 +40,21 @@ export function useKeyboardControls() {
     const onBlur = () => {
       controls.current = releasedState()
     }
+    // Same for typing: keyups land on the focused field and are ignored above, so a key held
+    // while opening chat would otherwise stay pressed until the player releases it again.
+    const onFocusIn = (event) => {
+      if (event.target instanceof HTMLElement && event.target.closest('input, textarea, select')) onBlur()
+    }
 
     window.addEventListener('keydown', onKeyDown)
     window.addEventListener('keyup', onKeyUp)
     window.addEventListener('blur', onBlur)
+    window.addEventListener('focusin', onFocusIn)
     return () => {
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
       window.removeEventListener('blur', onBlur)
+      window.removeEventListener('focusin', onFocusIn)
     }
   }, [])
 

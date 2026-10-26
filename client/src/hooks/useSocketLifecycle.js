@@ -18,7 +18,7 @@ export function useSocketLifecycle() {
     socket.on('disconnect', (reason) => {
       // The server drops us from our room on disconnect, so return to the menu.
       clearSnapshots()
-      useGameStore.setState({ connection: 'disconnected', room: null })
+      useGameStore.setState({ connection: 'disconnected', room: null, chat: [] })
       if (reason !== 'io client disconnect') store().showNotice('Connection lost — reconnecting…')
     })
 
@@ -34,6 +34,7 @@ export function useSocketLifecycle() {
     socket.on('room:update', (room) => store().setRoom(room))
     socket.on('room:snapshot', pushSnapshot)
     socket.on('player:left', ({ id }) => removeRemotePlayer(id))
+    socket.on('chat:message', (message) => store().addChatMessage(message))
 
     socket.on('race:countdown', ({ startsAt, serverNow }) => {
       clearSnapshots()

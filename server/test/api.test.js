@@ -214,3 +214,61 @@ test('matchmaking, transform relay and lap recording', { timeout: 30000 }, async
   assert.equal(mine.data.totalLaps, 1)
   assert.equal(mine.data.personalBestMs, lap.lapTimeMs)
 })
+
+test('room chat: delivery, history, isolation, validation and rate limiting', { timeout: 15000 }, async () => {
+  const alice = (await register('chat_alice')).data
+  const bob = (await register('chat_bob')).data
+  const eve = (await register('chat_eve')).data
+  const aliceSocket = await connect(alice.token)
+  const bobSocket = await connect(bob.token)
+  const eveSocket = await connect(eve.token)
+
+  assert.equal((await ask(aliceSocket, 'chat:send', { text: 'hello?' })).ok, false, 'chat needs a room')
+
+  const aliceRoom = await ask(aliceSocket, 'room:create')
+  const eveRoom = await ask(eveSocket, 'room:create')
+  assert.notEqual(aliceRoom.room.id, eveRoom.room.id)
+
+  const eveInbox = []
+  eveSocket.on('chat:message', (m) => eveInbox.push(m))
+
+  const received = new Promise((resolve) => {
+    aliceSocket.on('chat:message', (m) => m.kind === 'player' && resolve(m))
+  })
+  const bobJoin = await ask(bobSocket, 'room:join', { roomId: aliceRoom.room.id })
+  assert.ok(bobJoin.ok)
+  assert.equal(bobJoin.chat.at(-1).text, 'chat_bob joined', 'joiners get the history, including their join notice')
+
+  // Control characters are stripped and the sender comes from the token, not the payload.
+  const sent = await ask(bobSocket, 'chat:send', { text: '  gg\u0000  wp \n', username: 'chat_alice' })
+  assert.equal(sent.ok, true, sent.error)
+  const message = await received
+  assert.equal(message.text, 'gg wp')
+  assert.equal(message.username, 'chat_bob')
+  assert.equal(message.userId, bob.user.id)
+
+  assert.equal((await ask(bobSocket, 'chat:send', { text: '   ' })).ok, false, 'blank messages are rejected')
+  assert.equal((await ask(bobSocket, 'chat:send', { text: 'x'.repeat(201) })).ok, false, 'long messages are rejected')
+  assert.equal((await ask(bobSocket, 'chat:send', { text: 42 })).ok, false, 'non-text is rejected')
+
+  // One message already counts toward the 5-per-10s window.
+  const burst = []
+  for (let i = 0; i < 5; i++) burst.push(await ask(bobSocket, 'chat:send', { text: `spam ${i}` }))
+  assert.deepEqual(burst.map((r) => r.ok), [true, true, true, true, false])
+  assert.match(burst[4].error, /too quickly/)
+
+  const leftNotice = new Promise((resolve) => {
+    aliceSocket.on('chat:message', (m) => m.kind === 'system' && m.text === 'chat_bob left' && resolve(m))
+  })
+  await ask(bobSocket, 'room:leave')
+  await leftNotice
+
+  const rejoin = await ask(bobSocket, 'room:join', { roomId: aliceRoom.room.id })
+  assert.ok(rejoin.chat.some((m) => m.text === 'gg wp'), 'history survives while the room exists')
+
+  await sleep(100)
+  assert.ok(
+    eveInbox.every((m) => m.kind === 'system' && m.text === 'chat_eve joined'),
+    'messages never leak into other rooms',
+  )
+})

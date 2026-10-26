@@ -41,6 +41,11 @@ const LAP_TIME_TOLERANCE_MS = 1500
 const FINISH_GRACE_MS = 30000
 const EMPTY_ROOM_TTL_MS = 60000
 const MIN_TRANSFORM_INTERVAL_MS = 1000 / 70
+// Room chat: messages live in memory with the room and are replayed to players who join later.
+const CHAT_MAX_LENGTH = 200
+const CHAT_HISTORY = 50
+const CHAT_RATE_WINDOW_MS = 10000
+const CHAT_RATE_MAX = 5
 
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/
 const PASSWORD_MIN = 6
@@ -354,6 +359,16 @@ const io = new Server(httpServer, {
  * @property {NodeJS.Timeout|null} countdownTimer
  * @property {NodeJS.Timeout|null} finishTimer
  * @property {Array|null} results          standings of the last finished race
+ * @property {ChatMessage[]} chat           most recent CHAT_HISTORY messages
+ *
+ * @typedef {Object} ChatMessage
+ * @property {string} id
+ * @property {'player'|'system'} kind
+ * @property {string|null} userId
+ * @property {string|null} username
+ * @property {string|null} color
+ * @property {string} text
+ * @property {number} at
  */
 
 /** @type {Map<string, Room>} */
@@ -382,6 +397,7 @@ function createRoom({ isPrivate }) {
     countdownTimer: null,
     finishTimer: null,
     results: null,
+    chat: [],
   }
   rooms.set(room.id, room)
   return room
@@ -429,6 +445,49 @@ function serializeRoom(room) {
 
 function broadcastRoom(room) {
   io.to(room.id).emit('room:update', serializeRoom(room))
+}
+
+function postChat(room, { kind = 'player', player = null, text }) {
+  /** @type {ChatMessage} */
+  const message = {
+    id: crypto.randomUUID(),
+    kind,
+    userId: player?.userId ?? null,
+    username: player?.username ?? null,
+    color: player?.color ?? null,
+    text,
+    at: Date.now(),
+  }
+  room.chat.push(message)
+  if (room.chat.length > CHAT_HISTORY) room.chat.shift()
+  io.to(room.id).emit('chat:message', message)
+  return message
+}
+
+/** Normalizes chat input to a single line of printable text, or throws a GameError. */
+function readChatText(raw) {
+  if (typeof raw !== 'string') throw new GameError('Message must be text')
+  // Control characters, zero-width and bidi-override characters could hide or spoof text.
+  const text = raw
+    .normalize('NFC')
+    .replace(/[\u0000-\u001F\u007F-\u009F\u200B-\u200F\u2028-\u202E\u2066-\u2069]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (!text) throw new GameError('Message is empty')
+  if (text.length > CHAT_MAX_LENGTH) throw new GameError(`Messages are limited to ${CHAT_MAX_LENGTH} characters`)
+  return text
+}
+
+/** Sliding-window limit per socket so one player can't flood the room. */
+function checkChatRate(socket) {
+  const now = Date.now()
+  const recent = (socket.data.chatSentAt || []).filter((t) => now - t < CHAT_RATE_WINDOW_MS)
+  if (recent.length >= CHAT_RATE_MAX) {
+    socket.data.chatSentAt = recent
+    throw new GameError('You are sending messages too quickly')
+  }
+  recent.push(now)
+  socket.data.chatSentAt = recent
 }
 
 function nextFreeSlot(room) {
@@ -487,7 +546,8 @@ async function joinRoom(socket, room) {
     socket.join(room.id)
     socket.data.roomId = room.id
     broadcastRoom(room)
-    return { room: serializeRoom(room), selfId: socket.id }
+    postChat(room, { kind: 'system', text: `${player.username} joined` })
+    return { room: serializeRoom(room), selfId: socket.id, chat: room.chat }
   } finally {
     socket.data.joining = false
   }
@@ -501,8 +561,10 @@ function leaveCurrentRoom(socket) {
 
   const room = rooms.get(roomId)
   if (!room) return
+  const leaving = room.players.get(socket.id)
   room.players.delete(socket.id)
   io.to(room.id).emit('player:left', { id: socket.id })
+  if (leaving && room.players.size > 0) postChat(room, { kind: 'system', text: `${leaving.username} left` })
 
   if (room.players.size === 0) {
     clearRoomTimers(room)
@@ -690,7 +752,7 @@ io.on('connection', (socket) => {
       }
       const room = rooms.get(roomId.trim().toUpperCase())
       if (!room) throw new GameError('Room not found')
-      if (room.id === socket.data.roomId) return { room: serializeRoom(room), selfId: socket.id }
+      if (room.id === socket.data.roomId) return { room: serializeRoom(room), selfId: socket.id, chat: room.chat }
       return joinRoom(socket, room)
     }),
   )
@@ -730,6 +792,20 @@ io.on('connection', (socket) => {
       if (room.status !== 'lobby') throw new GameError('The race has already started')
       startCountdown(room)
       return {}
+    }),
+  )
+
+  // Room chat works in the lobby and mid-race. The sender's identity comes from the
+  // verified socket, never from the payload.
+  socket.on(
+    'chat:send',
+    withAck(async ({ text }) => {
+      const { room, player } = getRoomAndPlayer(socket)
+      if (!room || !player) throw new GameError('Join a room to chat')
+      const clean = readChatText(text)
+      checkChatRate(socket)
+      const message = postChat(room, { player, text: clean })
+      return { id: message.id }
     }),
   )
 

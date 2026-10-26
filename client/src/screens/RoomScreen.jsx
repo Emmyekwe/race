@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { request } from '../net/socket.js'
 import { useGameStore } from '../state/store.js'
 import { formatLapTime, ordinal } from '../utils/format.js'
+import ChatPanel from '../components/ChatPanel.jsx'
 import GarageUI from '../components/GarageUI.jsx'
 import LeaderboardModal from '../components/LeaderboardModal.jsx'
 
@@ -110,6 +111,8 @@ export default function RoomScreen() {
           )}
           {error && <p className="error">{error}</p>}
         </section>
+
+        <ChatPanel />
 
         <GarageUI />
 

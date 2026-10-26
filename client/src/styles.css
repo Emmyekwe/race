@@ -685,6 +685,134 @@ kbd {
   padding: 1px 5px;
 }
 
+/* ---------- Room chat ---------- */
+.chat-lobby {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+}
+.chat-lobby h2 {
+  margin: 0 0 10px;
+  font-size: 1.25rem;
+}
+.chat-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
+.chat-lobby .chat-log {
+  height: 260px;
+  padding: 10px 12px;
+  background: #0d1325;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.chat-line {
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+.chat-line .dot {
+  width: 9px;
+  height: 9px;
+  margin-right: 6px;
+  vertical-align: 1px;
+}
+.chat-name {
+  font-weight: 700;
+  margin-right: 6px;
+}
+.chat-line.mine .chat-name {
+  color: var(--accent-2);
+}
+.chat-time {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  margin-right: 8px;
+}
+.chat-system {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-style: italic;
+}
+.chat-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin-top: 10px;
+}
+.chat-form input {
+  min-width: 0;
+}
+.chat-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.chip {
+  border: 1px solid var(--border);
+  background: #1b2440;
+  color: var(--text);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.chip:hover:not(:disabled) {
+  background: #24304f;
+}
+.chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.chat-hint {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* In-race overlay: bottom-left, above the controls legend. Closed, it only shows recent
+   lines that fade out; open, it becomes an interactive panel. */
+.chat-race {
+  position: absolute;
+  left: 16px;
+  bottom: 60px;
+  width: min(360px, calc(100% - 32px));
+  pointer-events: none;
+  z-index: 5;
+}
+.chat-race .chat-line,
+.chat-race .chat-hint {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+.chat-race:not(.is-open) .chat-line {
+  animation: chat-fade 0.6s ease 10s forwards;
+}
+.chat-race.is-open {
+  pointer-events: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  backdrop-filter: blur(6px);
+}
+.chat-race.is-open .chat-log {
+  max-height: 220px;
+}
+@keyframes chat-fade {
+  to {
+    opacity: 0;
+  }
+}
+
 @keyframes pulse {
   50% {
     opacity: 0.5;
@@ -704,6 +832,9 @@ kbd {
   .hud-standings,
   .hud-controls {
     display: none;
+  }
+  .chat-race {
+    bottom: 140px;
   }
   .hud-center {
     font-size: 4.5rem;

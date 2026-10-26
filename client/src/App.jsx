@@ -5,6 +5,7 @@ import MenuScreen from './screens/MenuScreen.jsx'
 import RoomScreen from './screens/RoomScreen.jsx'
 import Game from './components/Game.jsx'
 import HUD from './components/HUD.jsx'
+import ChatPanel from './components/ChatPanel.jsx'
 import Toast from './components/Toast.jsx'
 
 export default function App() {
@@ -25,6 +26,7 @@ export default function App() {
       <div className="game-root">
         <Game />
         <HUD />
+        <ChatPanel variant="race" />
       </div>
     )
   }
